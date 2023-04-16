@@ -1,7 +1,12 @@
 document.getElementById('createParty').addEventListener('click', createParty);
 document.getElementById('startGame').addEventListener('click', () => startGame());
 
+let username = '';
+
 function createParty() {
+    // Prompt the player to enter their username
+    username = prompt('Enter your username:');
+
     // Generate invite link and display it
     const inviteLink = generateInviteLink();
     displayInviteLink(inviteLink);
