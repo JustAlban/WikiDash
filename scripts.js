@@ -1,24 +1,38 @@
 document.getElementById('createParty').addEventListener('click', createParty);
 document.getElementById('startGame').addEventListener('click', () => startGame());
+document.getElementById('stopGame').addEventListener('click', stopGame);
 
 let username = '';
 
-function createParty() {
+async function createParty() {
     // Prompt the player to enter their username
     username = prompt('Enter your username:');
 
+    // Generate party ID and create a new party
+    const partyId = Math.random().toString(36).substr(2, 9);
+    await createPartyInFirebase(partyId, username);
+
     // Generate invite link and display it
-    const inviteLink = generateInviteLink();
+    const inviteLink = generateInviteLink(partyId);
     displayInviteLink(inviteLink);
 
     // Show game area
     document.getElementById('gameArea').style.display = 'block';
 }
 
-function generateInviteLink() {
-    // Create a random party ID and return an invite link
-    const partyId = Math.random().toString(36).substr(2, 9);
+function generateInviteLink(partyId) {
     return location.origin + location.pathname + '?party=' + partyId;
+}
+
+async function createPartyInFirebase(partyId, username) {
+    const partyRef = firebase.database().ref('parties/' + partyId);
+    await partyRef.set({ player1: username, player2: null });
+    partyRef.on('value', (snapshot) => {
+        const party = snapshot.val();
+        if (party.player2) {
+            document.getElementById('startGame').disabled = false;
+        }
+    });
 }
 
 function displayInviteLink(inviteLink) {
@@ -84,4 +98,12 @@ function resetGame() {
 document.getElementById('timer').innerText = '00:00';
 document.getElementById('wikiFrame').src = 'https://en.wikipedia.org/wiki/Special:Random';
 }
+
+function stopGame() {
+    clearInterval(timerInterval);
+    resetGame();
+    // Notify both players that the game has been canceled
+    alert('The game has been canceled.');
+}
+
 
