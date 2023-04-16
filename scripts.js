@@ -26,11 +26,16 @@ function generateInviteLink(partyId) {
 
 async function createPartyInFirebase(partyId, username) {
     const partyRef = firebase.database().ref('parties/' + partyId);
-    await partyRef.set({ player1: username, player2: null });
+    await partyRef.set({ player1: username, player2: null, winner: null });
     partyRef.on('value', (snapshot) => {
         const party = snapshot.val();
         if (party.player2) {
             document.getElementById('startGame').disabled = false;
+        }
+        if (party.winner) {
+            clearInterval(timerInterval);
+            document.getElementById('wikiFrame').style.display = 'none';
+            document.getElementById('gameStatus').innerText = party.winner + ' won!';
         }
     });
 }
@@ -83,7 +88,21 @@ return (min < 10 ? '0' + min : min) + ':' + (sec < 10 ? '0' + sec : sec);
 }
 
 function checkVictory(endPage) {
-const wikiFrame = document.getElementById('wikiFrame');
+    const wikiFrame = document.getElementById('wikiFrame');
+
+    wikiFrame.onload = async function () {
+        if (wikiFrame.contentWindow.location.href === endPage) {
+            clearInterval(timerInterval);
+            const partyId = getPartyIdFromURL();
+            await setWinnerInFirebase(partyId, username);
+        }
+    };
+}
+
+async function setWinnerInFirebase(partyId, winner) {
+    const partyRef = firebase.database().ref('parties/' + partyId);
+    await partyRef.update({ winner: winner });
+}
 
 wikiFrame.onload = function () {
     if (wikiFrame.contentWindow.location.href === endPage) {
@@ -105,5 +124,3 @@ function stopGame() {
     // Notify both players that the game has been canceled
     alert('The game has been canceled.');
 }
-
-
