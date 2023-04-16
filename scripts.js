@@ -8,16 +8,35 @@ async function createParty() {
     // Prompt the player to enter their username
     username = prompt('Enter your username:');
 
-    // Generate party ID and create a new party
-    const partyId = Math.random().toString(36).substr(2, 9);
-    await createPartyInFirebase(partyId, username);
+    const partyId = getPartyIdFromURL();
+    if (partyId) {
+        // Join the existing party
+        await joinPartyInFirebase(partyId, username);
+    } else {
+        // Generate party ID and create a new party
+        const newPartyId = Math.random().toString(36).substr(2, 9);
+        await createPartyInFirebase(newPartyId, username);
 
-    // Generate invite link and display it
-    const inviteLink = generateInviteLink(partyId);
-    displayInviteLink(inviteLink);
+        // Generate invite link and display it
+        const inviteLink = generateInviteLink(newPartyId);
+        displayInviteLink(inviteLink);
+    }
 
     // Show game area
     document.getElementById('gameArea').style.display = 'block';
+}
+
+async function joinPartyInFirebase(partyId, username) {
+    const partyRef = firebase.database().ref('parties/' + partyId);
+    await partyRef.update({ player2: username });
+    partyRef.on('value', (snapshot) => {
+        const party = snapshot.val();
+        if (party.winner) {
+            clearInterval(timerInterval);
+            document.getElementById('wikiFrame').style.display = 'none';
+            document.getElementById('gameStatus').innerText = party.winner + ' won!';
+        }
+    });
 }
 
 function generateInviteLink(partyId) {
@@ -85,6 +104,11 @@ function formatTime(seconds) {
 const min = Math.floor(seconds / 60);
 const sec = seconds % 60;
 return (min < 10 ? '0' + min : min) + ':' + (sec < 10 ? '0' + sec : sec);
+}
+
+function getPartyIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('party');
 }
 
 function checkVictory(endPage) {
